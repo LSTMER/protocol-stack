@@ -11,6 +11,23 @@
  */
 static void icmp_resp(buf_t *req_buf, uint8_t *src_ip) {
     // TO-DO
+    icmp_hdr_t *req_icmp_hdr = (icmp_hdr_t *)req_buf->data;
+
+    buf_remove_header(req_buf, sizeof(icmp_hdr_t));
+
+    buf_init(&txbuf, req_buf->len);
+    memcpy(txbuf.data, req_buf->data, req_buf->len);
+
+    buf_add_header(&txbuf, sizeof(icmp_hdr_t));
+    icmp_hdr_t *icmp_hdr = (icmp_hdr_t *)txbuf.data;
+
+    icmp_hdr->type = ICMP_TYPE_ECHO_REPLY;
+    icmp_hdr->code = 0;
+    icmp_hdr->id16 = req_icmp_hdr->id16;
+    icmp_hdr->seq16 = req_icmp_hdr->seq16;
+    icmp_hdr->checksum16 = 0;
+    icmp_hdr->checksum16 = checksum16((uint16_t *)icmp_hdr, txbuf.len);
+    ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
 
 /**
@@ -21,6 +38,13 @@ static void icmp_resp(buf_t *req_buf, uint8_t *src_ip) {
  */
 void icmp_in(buf_t *buf, uint8_t *src_ip) {
     // TO-DO
+    if(buf->len < sizeof(icmp_hdr_t)){
+        return; //  数据包长度小于icmp头长度 包不完整 不予处理
+    }
+    icmp_hdr_t *icmp_hdr = (icmp_hdr_t *)buf->data;
+    if(icmp_hdr->type == ICMP_TYPE_ECHO_REQUEST){
+        icmp_resp(buf, src_ip);
+    }
 }
 
 /**
@@ -32,6 +56,23 @@ void icmp_in(buf_t *buf, uint8_t *src_ip) {
  */
 void icmp_unreachable(buf_t *recv_buf, uint8_t *src_ip, icmp_code_t code) {
     // TO-DO
+    ip_hdr_t *ip_hdr = (ip_hdr_t *)recv_buf->data;
+
+    buf_init(&txbuf, sizeof(ip_hdr_t)+8);
+    printf("icmp packet is %d bytes\n", txbuf.len);
+    memcpy(txbuf.data, ip_hdr, sizeof(ip_hdr_t)+8);
+
+    buf_add_header(&txbuf, sizeof(icmp_hdr_t));
+    icmp_hdr_t *icmp_hdr = (icmp_hdr_t *)txbuf.data;
+    
+    icmp_hdr->type = ICMP_TYPE_UNREACH;
+    icmp_hdr->code = code;
+    icmp_hdr->checksum16 = 0;
+    icmp_hdr->id16 = 0;
+    icmp_hdr->seq16 = 0;
+    
+    icmp_hdr->checksum16 = checksum16((uint16_t *)icmp_hdr, txbuf.len);
+    ip_out(&txbuf, src_ip, NET_PROTOCOL_ICMP);
 }
 
 /**

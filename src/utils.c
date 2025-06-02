@@ -1,7 +1,7 @@
 #include "utils.h"
 
 #include "net.h"
-
+#include "ip.h"
 #include <stdio.h>
 #include <string.h>
 /**
@@ -70,7 +70,22 @@ uint8_t ip_prefix_match(uint8_t *ipa, uint8_t *ipb) {
  * @return uint16_t 校验和
  */
 uint16_t checksum16(uint16_t *data, size_t len) {
-    // TO-DO
+    uint32_t sum = 0;
+    while (len > 1) {
+        sum += *data++;
+        len -= 2;
+        while(sum>>16){
+            sum = (sum >> 16) + (sum & 0xffff);
+        }
+    }
+    if(len){
+        sum += *(uint8_t *)data;
+        while(sum>>16){
+            sum = (sum >> 16) + (sum & 0xffff);
+        }
+    }
+    uint16_t sum16 = sum;
+    return ~sum16;
 }
 
 #pragma pack(1)
@@ -94,4 +109,43 @@ typedef struct peso_hdr {
  */
 uint16_t transport_checksum(uint8_t protocol, buf_t *buf, uint8_t *src_ip, uint8_t *dst_ip) {
     // TO-DO
+    size_t len = buf->len;
+    buf_add_header(buf, sizeof(ip_hdr_t));
+    ip_hdr_t *ip_hdr = (ip_hdr_t *)buf->data;
+    ip_hdr_t *ip_temp = (ip_hdr_t*)malloc(sizeof(ip_hdr_t));
+    memcpy(ip_temp, ip_hdr, sizeof(ip_hdr_t));
+    buf_remove_header(buf, sizeof(ip_hdr_t));
+
+    buf_add_header(buf, sizeof(peso_hdr_t));
+    peso_hdr_t *peso_hdr = (peso_hdr_t *)buf->data;
+    memcpy(peso_hdr->src_ip, src_ip, NET_IP_LEN);
+    memcpy(peso_hdr->dst_ip, dst_ip, NET_IP_LEN);
+    peso_hdr->protocol = protocol;
+    peso_hdr->total_len16 = swap16(len);
+    peso_hdr->placeholder = 0;
+
+    uint16_t checksum;
+    if(buf->len%2==1){
+        buf_add_padding(buf, 1);
+        checksum = checksum16((uint16_t *)buf->data, buf->len);
+        buf_remove_header(buf, sizeof(peso_hdr_t));
+
+        buf_add_header(buf, sizeof(ip_hdr_t));
+        ip_hdr_t *ip_hdr1 = (ip_hdr_t *)buf->data;
+        memcpy(ip_hdr1, ip_temp, sizeof(ip_hdr_t));
+        buf_remove_header(buf, sizeof(ip_hdr_t));
+        free(ip_temp);
+
+        buf_remove_padding(buf, 1);
+    }else{
+        checksum = checksum16((uint16_t *)buf->data, buf->len);
+        buf_remove_header(buf, sizeof(peso_hdr_t));
+
+        buf_add_header(buf, sizeof(ip_hdr_t));
+        ip_hdr_t *ip_hdr1 = (ip_hdr_t *)buf->data;
+        memcpy(ip_hdr1, ip_temp, sizeof(ip_hdr_t));
+        buf_remove_header(buf, sizeof(ip_hdr_t));
+        free(ip_temp);
+    }
+    return checksum;
 }

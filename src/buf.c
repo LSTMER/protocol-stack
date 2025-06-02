@@ -66,7 +66,7 @@ int buf_add_padding(buf_t *buf, size_t len) {
         fprintf(stderr, "Error in buf_add_padding:%zu+%zu\n", buf->len, len);
         return -1;
     }
-    memset(buf->data + buf->len, 0, len);
+    memset(buf->data - buf->len, 0, len);
     buf->len += len;
     return 0;
 }

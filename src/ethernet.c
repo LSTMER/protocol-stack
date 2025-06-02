@@ -39,8 +39,9 @@ void ethernet_out(buf_t *buf, const uint8_t *mac, net_protocol_t protocol) {
     if(buf->len < ETHERNET_MIN_TRANSPORT_UNIT){
         buf_add_padding(buf, ETHERNET_MIN_TRANSPORT_UNIT - buf->len);
     }
-    ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
+        
     buf_add_header(buf, sizeof(ether_hdr_t));
+    ether_hdr_t *hdr = (ether_hdr_t *)buf->data;
     memcpy(hdr->dst, mac, NET_MAC_LEN);
     memcpy(hdr->src, net_if_mac, NET_MAC_LEN);
     hdr->protocol16 = swap16(protocol);

@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     while ((ret = driver_recv(&buf)) > 0) {
         printf("\b\b%02d", i);
         fprintf(control_flow, "\nRound %02d -----------------------------\n", i++);
-        if (memcmp(buf.data, my_mac, 6) && memcmp(buf.data, boardcast_mac, 6)) {
+        if (memcmp(buf.data, my_mac, 6) && memcmp(buf.data, boardcast_mac, 6)) {//  不是本机报文
             buf_t buf2;
             buf_copy(&buf2, &buf, 0);
             memset(buf2.data, 0, sizeof(ether_hdr_t));
