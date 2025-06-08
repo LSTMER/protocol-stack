@@ -59,7 +59,7 @@ void icmp_unreachable(buf_t *recv_buf, uint8_t *src_ip, icmp_code_t code) {
     ip_hdr_t *ip_hdr = (ip_hdr_t *)recv_buf->data;
 
     buf_init(&txbuf, sizeof(ip_hdr_t)+8);
-    printf("icmp packet is %d bytes\n", txbuf.len);
+    // printf("icmp packet is %d bytes\n", txbuf.len);
     memcpy(txbuf.data, ip_hdr, sizeof(ip_hdr_t)+8);
 
     buf_add_header(&txbuf, sizeof(icmp_hdr_t));

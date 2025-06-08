@@ -61,52 +61,52 @@ void http_respond(tcp_conn_t *tcp_conn, char *url_path, uint16_t port, uint8_t *
                                "</BODY></HTML>\r\n";
         /* Step1 ：发送 HTTP 404 请求头 */
         // TODO: 发送 HTTP 状态行
-
-
         // 发送 HTTP 连接信息
-        sprintf(resp_buffer, "Connection: Keep-Alive\r\n");
+        // TODO: 发送 HTTP 内容类型
+        // TODO: 发送 HTTP 内容长度
+        // TODO: 发送 HTTP 响应头与响应体的分隔符
+        snprintf(resp_buffer, sizeof(resp_buffer),
+            "HTTP/1.1 404 Not Found\r\n"
+            "Connection: Keep-Alive\r\n"
+            "Content-Type: %s\r\n"
+            "Content-Length: %zu\r\n"
+            "\r\n",
+            http_get_mime_type(not_found_body), strlen(not_found_body));
+
         tcp_send(tcp_conn, (uint8_t *)resp_buffer, strlen(resp_buffer), port, dst_ip, dst_port);
 
-        // TODO: 发送 HTTP 内容类型
-
-
-        // TODO: 发送 HTTP 内容长度
-
-
-        // TODO: 发送 HTTP 响应头与响应体的分隔符
-
-
-        // TODO: 发送 HTTP 响应体
-
+        // TODO: 发送 HTTP 响应体 
+        tcp_send(tcp_conn, (uint8_t *)not_found_body, strlen(not_found_body), port, dst_ip, dst_port);
 
         return;
     }
 
     /* Step2 ：发送 HTTP 请求头 */
     // TODO: 发送 HTTP 状态行
-
     // 发送 HTTP 连接信息
-    sprintf(resp_buffer, "Connection: Keep-Alive\r\n");
-    tcp_send(tcp_conn, (uint8_t *)resp_buffer, strlen(resp_buffer), port, dst_ip, dst_port);
-
     const char *content_type = http_get_mime_type(file_path);
     // TODO: 发送 HTTP 内容类型，根据文件类型设置 MIME 类型
-
-
     fseek(file, 0, SEEK_END);
     size_t content_length = ftell(file);
     fseek(file, 0, SEEK_SET);
     // TODO: 发送 HTTP 内容长度
-
-
     // TODO: 发送 HTTP 响应头与响应体的分隔符
+    // 构建 HTTP 响应头
+    snprintf(resp_buffer, sizeof(resp_buffer),
+        "HTTP/1.1 200 OK\r\n"
+        "Connection: Keep-Alive\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %zu\r\n"
+        "\r\n",
+        content_type, content_length);
 
+    tcp_send(tcp_conn, (uint8_t *)resp_buffer, strlen(resp_buffer), port, dst_ip, dst_port);
 
     /* Step3 ：发送 HTTP 响应体 */
     size_t bytes_read;
     while ((bytes_read = fread(resp_buffer, 1, sizeof(resp_buffer), file)) > 0) {
         // TODO: 每次发送读取的文件内容块
-
+        tcp_send(tcp_conn, (uint8_t *)resp_buffer, bytes_read, port, dst_ip, dst_port);
     }
 
     // 后处理: 关闭文件
@@ -124,7 +124,7 @@ void http_request_handler(tcp_conn_t *tcp_conn, uint8_t *data, size_t len, uint8
     // 获取请求 URL
     int idx = 0;
     int j = 0;
-    while (data[idx] != ' ')
+    while (data[idx] != ' ')// GET be read
         ++idx;
     ++idx;
     while (data[idx] != ' ') {
